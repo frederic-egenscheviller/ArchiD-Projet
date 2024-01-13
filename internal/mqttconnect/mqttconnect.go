@@ -43,6 +43,14 @@ func (m *Client) Disconnect() {
 	fmt.Println("Disconnected from MQTT broker")
 }
 
+func (m *Client) Unsubscribe(topic string) error {
+	if token := m.client.Unsubscribe(topic); token.Wait() && token.Error() != nil {
+		return token.Error()
+	}
+	fmt.Printf("Unsubscribed from topic %s\n", topic)
+	return nil
+}
+
 func WaitForSignal() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)
