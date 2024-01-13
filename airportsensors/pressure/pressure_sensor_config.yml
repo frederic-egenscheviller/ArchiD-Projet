@@ -1,0 +1,5 @@
+brokerAddress: tcp://zuckernas.ddns.net:1883
+port: 1883
+qos: 1
+clientID: pressure_sensor
+transmissionFrequency: 5s
