@@ -1,0 +1,5 @@
+brokerAddress: tcp://localhost:1883
+topics:
+  alertManager:
+    subscribe: airports/+
+    publish: airports/alertManager/
