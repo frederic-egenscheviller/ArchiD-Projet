@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -30,6 +31,14 @@ type SensorData struct {
 	MeasurementTime  time.Time
 }
 
+type SensorInfo struct {
+	TransmissionFrequency time.Duration `yaml:"transmissionFrequency"`
+	ClientID              string        `yaml:"clientID"`
+	QoS                   byte          `yaml:"qos"`
+	AirportIATA           string        `yaml:"airportIATA"`
+	GeoIDInsee            string        `yaml:"geoIDInsee"`
+}
+
 func init() {
 	err := godotenv.Load()
 	if err != nil {
@@ -37,10 +46,10 @@ func init() {
 	}
 }
 
-func FetchSensorDataFromAPI(measurementType string) (SensorData, error) {
+func FetchSensorDataFromAPI(sensorInfo SensorInfo) (SensorData, error) {
 	apiKey := os.Getenv("METEO_FRANCE_API_KEY")
 
-	apiURL := "https://public-api.meteofrance.fr/public/DPObs/v1/station/infrahoraire-6m?id_station=13054001&format=json"
+	apiURL := fmt.Sprintf("https://public-api.meteofrance.fr/public/DPObs/v1/station/infrahoraire-6m?id_station=%s&format=json", sensorInfo.GeoIDInsee)
 
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
@@ -79,34 +88,33 @@ func FetchSensorDataFromAPI(measurementType string) (SensorData, error) {
 
 	var sensorData SensorData
 
-	switch measurementType {
-	case "pressure_sensor":
+	switch true {
+	case strings.HasPrefix(sensorInfo.ClientID, "pressure_sensor"):
 		sensorData = SensorData{
 			SensorID:         1,
-			AirportID:        "MRS",
+			AirportID:        sensorInfo.AirportIATA,
 			Measurement:      "pressure",
 			MeasurementValue: float64(apiResponse.Pres) / 100,
 			MeasurementTime:  referenceTimeUTC1,
 		}
-	case "temperature_sensor":
+	case strings.HasPrefix(sensorInfo.ClientID, "temperature_sensor"):
 		sensorData = SensorData{
 			SensorID:         1,
-			AirportID:        "MRS",
+			AirportID:        sensorInfo.AirportIATA,
 			Measurement:      "temperature",
 			MeasurementValue: apiResponse.T,
 			MeasurementTime:  referenceTimeUTC1,
 		}
-	case "wind_sensor":
+	case strings.HasPrefix(sensorInfo.ClientID, "wind_sensor"):
 		sensorData = SensorData{
 			SensorID:         1,
-			AirportID:        "MRS",
+			AirportID:        sensorInfo.AirportIATA,
 			Measurement:      "wind",
 			MeasurementValue: apiResponse.Ff,
 			MeasurementTime:  referenceTimeUTC1,
 		}
 	default:
-		return SensorData{}, fmt.Errorf("unknown measurement type: %s", measurementType)
+		return SensorData{}, fmt.Errorf("unknown measurement type: %s", sensorInfo.ClientID)
 	}
-
 	return sensorData, nil
 }

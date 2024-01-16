@@ -1,0 +1,13 @@
+brokerAddress: tcp://zuckernas.ddns.net:1883
+port: 1883
+sensors:
+  - airportIATA: MRS
+    geoIDInsee: 13054001
+    clientID: pressure_sensor_mrs
+    transmissionFrequency: 10s
+    qos: 1
+  - airportIATA: LYS
+    geoIDInsee: 69299001
+    clientID: pressure_sensor_lys
+    transmissionFrequency: 10s
+    qos: 1

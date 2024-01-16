@@ -1,20 +1,24 @@
 package sensors
 
 import (
-	"ArchiD-Projet/airportsensors/meteofranceAPI"
+	"ArchiD-Projet/internal/meteofranceAPI"
 	"ArchiD-Projet/internal/mqttconnect"
 	"fmt"
 	"gopkg.in/yaml.v2"
 	"os"
+	"sync"
 	"time"
 )
 
-type SensorData struct {
-	SensorID         int
-	AirportID        string
-	Measurement      string
-	MeasurementValue float64
-	MeasurementTime  time.Time
+type Sensor struct {
+	client    *mqttconnect.Client
+	qos       byte
+	topic     string
+	retained  bool
+	lastValue string
+	config    SensorConfig
+	info      SensorInfo
+	waitGroup *sync.WaitGroup
 }
 
 type SensorConfig struct {
@@ -25,37 +29,52 @@ type SensorConfig struct {
 	TransmissionFrequency time.Duration `yaml:"transmissionFrequency"`
 }
 
-type Sensor struct {
-	client    *mqttconnect.Client
-	qos       byte
-	topic     string
-	retained  bool
-	lastValue string
-	Config    SensorConfig
+type SensorData struct {
+	SensorID         int
+	AirportID        string
+	Measurement      string
+	MeasurementValue float64
+	MeasurementTime  time.Time
 }
 
-func LoadSensorConfig(filename string) (SensorConfig, error) {
-	var config SensorConfig
+type RetrievedSensorsConfig struct {
+	BrokerAddress string       `yaml:"brokerAddress"`
+	Port          int          `yaml:"port"`
+	Sensors       []SensorInfo `yaml:"sensors"`
+}
+
+type SensorInfo struct {
+	TransmissionFrequency time.Duration `yaml:"transmissionFrequency"`
+	ClientID              string        `yaml:"clientID"`
+	QoS                   byte          `yaml:"qos"`
+	AirportIATA           string        `yaml:"airportIATA"`
+	GeoIDInsee            string        `yaml:"geoIDInsee"`
+}
+
+func LoadSensorConfigs(filename string) (RetrievedSensorsConfig, error) {
+	var configs RetrievedSensorsConfig
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		return config, err
+		fmt.Println(configs)
+		return configs, err
 	}
 
-	err = yaml.Unmarshal(data, &config)
+	err = yaml.Unmarshal(data, &configs)
 	if err != nil {
-		return config, err
+		return configs, err
 	}
 
-	return config, nil
+	return configs, nil
 }
 
-func NewSensor(client *mqttconnect.Client, qos byte, retained bool, config SensorConfig) *Sensor {
+func NewSensor(client *mqttconnect.Client, qos byte, retained bool, config SensorConfig, info SensorInfo) *Sensor {
 	return &Sensor{
 		client:   client,
 		qos:      qos,
 		retained: retained,
-		Config:   config,
+		config:   config,
+		info:     info,
 	}
 }
 
@@ -63,7 +82,7 @@ func (sensor *Sensor) PublishSensorData(data SensorData) {
 	payload := fmt.Sprintf(`"%s %s %f"`,
 		data.MeasurementTime.Format("2006-01-02 15:04:05"), data.Measurement, data.MeasurementValue)
 
-	sensor.topic = "airport/" + data.AirportID
+	sensor.topic = "airports/" + data.AirportID
 
 	err := sensor.client.Publish(sensor.topic, sensor.qos, sensor.retained, payload)
 	if err != nil {
@@ -72,12 +91,17 @@ func (sensor *Sensor) PublishSensorData(data SensorData) {
 }
 
 func (sensor *Sensor) StartMonitoring() {
-	ticker := time.NewTicker(sensor.Config.TransmissionFrequency)
+	ticker := time.NewTicker(sensor.config.TransmissionFrequency)
+
+	sensor.waitGroup.Add(1)
+
 	go func() {
+		defer sensor.waitGroup.Done()
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
-				sensorData, err := meteofranceAPI.FetchSensorDataFromAPI(sensor.Config.ClientID)
+				sensorData, err := meteofranceAPI.FetchSensorDataFromAPI(meteofranceAPI.SensorInfo(sensor.info))
 				if err != nil {
 					fmt.Println("Error fetching sensor data from API:", err)
 					continue
@@ -87,5 +111,38 @@ func (sensor *Sensor) StartMonitoring() {
 		}
 	}()
 
+	mqttconnect.WaitForSignal()
+}
+
+func LoadSensors(retrievedSensorsConfig RetrievedSensorsConfig) {
+	var sensorsList []*Sensor
+
+	for _, sensorInfo := range retrievedSensorsConfig.Sensors {
+		client, err := mqttconnect.NewClient(retrievedSensorsConfig.BrokerAddress, sensorInfo.ClientID)
+		if err != nil {
+			fmt.Printf("Error creating MQTT client for %s: %v\n", sensorInfo.ClientID, err)
+			continue
+		}
+
+		config := SensorConfig{
+			BrokerAddress:         retrievedSensorsConfig.BrokerAddress,
+			Port:                  retrievedSensorsConfig.Port,
+			QoS:                   sensorInfo.QoS,
+			ClientID:              sensorInfo.ClientID,
+			TransmissionFrequency: sensorInfo.TransmissionFrequency,
+		}
+
+		sensor := NewSensor(client, sensorInfo.QoS, true, config, sensorInfo)
+		sensorsList = append(sensorsList, sensor)
+	}
+
+	var waitGroup sync.WaitGroup
+
+	for _, sensor := range sensorsList {
+		sensor.waitGroup = &waitGroup
+		go sensor.StartMonitoring()
+	}
+
+	waitGroup.Wait()
 	mqttconnect.WaitForSignal()
 }
