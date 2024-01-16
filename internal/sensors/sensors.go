@@ -4,7 +4,7 @@ import (
 	"ArchiD-Projet/internal/meteofranceAPI"
 	"ArchiD-Projet/internal/mqttconnect"
 	"fmt"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"os"
 	"sync"
 	"time"
@@ -15,7 +15,6 @@ type Sensor struct {
 	qos       byte
 	topic     string
 	retained  bool
-	lastValue string
 	config    SensorConfig
 	info      SensorInfo
 	waitGroup *sync.WaitGroup
@@ -98,16 +97,13 @@ func (sensor *Sensor) StartMonitoring() {
 	go func() {
 		defer sensor.waitGroup.Done()
 		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				sensorData, err := meteofranceAPI.FetchSensorDataFromAPI(meteofranceAPI.SensorInfo(sensor.info))
-				if err != nil {
-					fmt.Println("Error fetching sensor data from API:", err)
-					continue
-				}
-				sensor.PublishSensorData(SensorData(sensorData))
+		for range ticker.C {
+			sensorData, err := meteofranceAPI.FetchSensorDataFromAPI(meteofranceAPI.SensorInfo(sensor.info))
+			if err != nil {
+				fmt.Println("Error fetching sensor data from API:", err)
+				continue
 			}
+			sensor.PublishSensorData(SensorData(sensorData))
 		}
 	}()
 
