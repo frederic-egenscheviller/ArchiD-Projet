@@ -1,4 +1,4 @@
-package brokerConfiguration
+package brokerconfiguration
 
 import (
 	"fmt"

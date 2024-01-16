@@ -11,9 +11,12 @@ type Client struct {
 	client mqtt.Client
 }
 
-func NewClient(brokerAddress, clientID string) (*Client, error) {
+func NewClient(brokerAddress string, clientID string, defaultPublishHandler func(client mqtt.Client, message mqtt.Message)) (*Client, error) {
 	opts := mqtt.NewClientOptions().AddBroker(brokerAddress)
 	opts.SetClientID(clientID)
+	if defaultPublishHandler != nil {
+		opts.SetDefaultPublishHandler(defaultPublishHandler)
+	}
 
 	client := mqtt.NewClient(opts)
 

@@ -1,0 +1,12 @@
+temp:
+  min: 0.0
+  max: 35.0
+wind:
+  speed: 60.0
+pressure:
+  summer:
+    min: 1010.0
+    max: 1028.0
+  winter:
+    min: 1001.0
+    max: 1047.0
