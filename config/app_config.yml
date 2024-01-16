@@ -1,4 +1,4 @@
-brokerAddress: tcp://localhost:1883
+brokerAddress: tcp://zuckernas.ddns.net:1883
 topics:
   alertManager:
     subscribe: airports/+
