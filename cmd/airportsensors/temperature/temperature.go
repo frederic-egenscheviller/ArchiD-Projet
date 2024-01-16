@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	retrievedSensorsConfig, err := sensors.LoadSensorConfigs("cmd/airportsensors/temperature/temperature_sensor_config.yml")
+	retrievedSensorsConfig, err := sensors.LoadSensorConfigs("config/temperature_sensor_config.yml")
 	if err != nil {
 		fmt.Println("Error loading sensor configurations:", err)
 		return
