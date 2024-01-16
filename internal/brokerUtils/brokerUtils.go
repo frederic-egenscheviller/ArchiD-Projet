@@ -1,4 +1,4 @@
-package brokerUtils
+package brokerutils
 
 import (
 	"strings"

@@ -78,7 +78,7 @@ func NewSensor(client *mqttconnect.Client, qos byte, retained bool, config Senso
 }
 
 func (sensor *Sensor) PublishSensorData(data SensorData) {
-	payload := fmt.Sprintf(`"%s %s %f"`,
+	payload := fmt.Sprintf("%s %s %f",
 		data.MeasurementTime.Format("2006-01-02 15:04:05"), data.Measurement, data.MeasurementValue)
 
 	sensor.topic = "airports/" + data.AirportID
@@ -114,7 +114,7 @@ func LoadSensors(retrievedSensorsConfig RetrievedSensorsConfig) {
 	var sensorsList []*Sensor
 
 	for _, sensorInfo := range retrievedSensorsConfig.Sensors {
-		client, err := mqttconnect.NewClient(retrievedSensorsConfig.BrokerAddress, sensorInfo.ClientID)
+		client, err := mqttconnect.NewClient(retrievedSensorsConfig.BrokerAddress, sensorInfo.ClientID, nil)
 		if err != nil {
 			fmt.Printf("Error creating MQTT client for %s: %v\n", sensorInfo.ClientID, err)
 			continue
