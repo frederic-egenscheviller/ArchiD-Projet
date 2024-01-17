@@ -3,8 +3,8 @@ topics:
   alertManager:
     subscribe: airports/+
     publish: airports/alertManager/
-  databaseRecorder:
-    bucket: Airport MQTT
-    org: ArchiD Team
-    url: http://airportmqtt.ddns.net:8086
-    subscribe: airports/+
+databaseRecorder:
+  bucket: Airport MQTT
+  org: ArchiD Team
+  url: http://airportmqtt.ddns.net:8086
+  subscribe: airports/+

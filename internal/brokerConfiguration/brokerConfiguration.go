@@ -80,9 +80,9 @@ func GetDatabaseRecorderSettings() []string {
 	databaseRecorderBucket := config.DatabaseRecorder.Bucket
 	databaseRecorderOrg := config.DatabaseRecorder.Org
 	databaseRecorderUrl := config.DatabaseRecorder.Url
-	databaseRecorderSuscribe := config.DatabaseRecorder.Subscribe
+	databaseRecorderSubscribe := config.DatabaseRecorder.Subscribe
 
-	databaseRecorderConfig := []string{databaseRecorderBucket, databaseRecorderOrg, databaseRecorderUrl, databaseRecorderSuscribe}
+	databaseRecorderConfig := []string{databaseRecorderBucket, databaseRecorderOrg, databaseRecorderUrl, databaseRecorderSubscribe}
 
 	return databaseRecorderConfig
 }
