@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import {Component, Output} from '@angular/core';
 
 @Component({
   selector: 'app-research-bar',
@@ -6,5 +6,6 @@ import { Component } from '@angular/core';
   styleUrls: ['./research-bar.component.scss']
 })
 export class ResearchBarComponent {
-
+  @Output()
+  airportIsSelected = false;
 }
