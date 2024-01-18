@@ -37,7 +37,6 @@ func (m *Client) Subscribe(topic string, qos byte, callback mqtt.MessageHandler)
 	if token := m.client.Subscribe(topic, qos, callback); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
-	fmt.Printf("Suscribe on topic %s\n", topic)
 	return nil
 }
 

@@ -16,12 +16,13 @@ import (
 )
 
 var (
-	config = brokerconfiguration.GetDatabaseRecorderSettings()
-	BROKER = brokerconfiguration.GetBrokerAddress()
-	BUCKET = config[0]
-	ORG    = config[1]
-	URL    = config[2]
-	TOPIC  = config[3]
+	config       = brokerconfiguration.GetDatabaseRecorderSettings()
+	BROKER       = brokerconfiguration.GetBrokerAddress()
+	BUCKET       = config[0]
+	ORG          = config[1]
+	URL          = config[2]
+	TOPIC        = config[3]
+	influxClient influxdb2.Client
 )
 
 func init() {
@@ -31,14 +32,10 @@ func init() {
 	}
 }
 
-func onMessageReceived(client mqtt.Client, message mqtt.Message) {
+func onMessageReceived(_ mqtt.Client, message mqtt.Message) {
 
 	payload := string(message.Payload())
 	data := strings.Split(payload, " ")
-
-	apiKey := os.Getenv("INFLUX_DB_API_KEY")
-
-	influxClient := influxdb2.NewClient(URL, apiKey)
 
 	submittedTimestamp := data[0] + " " + data[1]
 	sensor := data[2]
@@ -48,28 +45,29 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 		return
 	}
 
-	parsedTime, err := time.Parse(time.DateTime, submittedTimestamp)
-	if err != nil {
-		fmt.Println("Erreur de conversion de la chaîne en objet time.Time :", err)
-		return
-	}
+	loc, _ := time.LoadLocation("Europe/Paris")
+	th, _ := time.ParseInLocation("02/01/2006 15:04:05", submittedTimestamp, loc)
 
 	writeAPI := influxClient.WriteAPIBlocking(ORG, BUCKET)
 
 	p := influxdb2.NewPointWithMeasurement(sensor).
 		AddTag("airport", brokerutils.GetAirportCodeFromTopic(message.Topic())).
 		AddField("value", value).
-		SetTime(parsedTime)
+		SetTime(th)
 
 	err = writeAPI.WritePoint(context.Background(), p)
 	if err != nil {
 		return
 	}
-
-	influxClient.Close()
 }
 
 func main() {
+	apiKey := os.Getenv("INFLUX_DB_API_KEY")
+	if apiKey == "" {
+		fmt.Println("INFLUX_DB_API_KEY environment variable not set")
+		return
+	}
+	influxClient = influxdb2.NewClient(URL, apiKey)
 	client, err := mqttconnect.NewClient(BROKER, "database_recorder", onMessageReceived)
 	if err != nil {
 		fmt.Println("Error creating MQTT client:", err)
