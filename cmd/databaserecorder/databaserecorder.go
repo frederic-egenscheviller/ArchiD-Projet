@@ -15,9 +15,8 @@ import (
 	"time"
 )
 
-var config = brokerconfiguration.GetDatabaseRecorderSettings()
-
 var (
+	config = brokerconfiguration.GetDatabaseRecorderSettings()
 	BROKER = brokerconfiguration.GetBrokerAddress()
 	BUCKET = config[0]
 	ORG    = config[1]
@@ -33,7 +32,7 @@ func init() {
 }
 
 func onMessageReceived(client mqtt.Client, message mqtt.Message) {
-	fmt.Println(client.IsConnected())
+
 	payload := string(message.Payload())
 	data := strings.Split(payload, " ")
 
@@ -57,11 +56,10 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 
 	writeAPI := influxClient.WriteAPIBlocking(ORG, BUCKET)
 
-	fmt.Println(parsedTime)
-	p := influxdb2.NewPoint(brokerutils.GetAirportCodeFromTopic(message.Topic()),
-		map[string]string{"unit": sensor},
-		map[string]interface{}{"value": value},
-		time.Now())
+	p := influxdb2.NewPointWithMeasurement(sensor).
+		AddTag("airport", brokerutils.GetAirportCodeFromTopic(message.Topic())).
+		AddField("value", value).
+		SetTime(parsedTime)
 
 	err = writeAPI.WritePoint(context.Background(), p)
 	if err != nil {
