@@ -16,6 +16,12 @@ type Config struct {
 			Publish   string `yaml:"publish"`
 		} `yaml:"alertManager"`
 	} `yaml:"topics"`
+	DatabaseRecorder struct {
+		Bucket    string `yaml:"bucket"`
+		Org       string `yaml:"org"`
+		Url       string `yaml:"url"`
+		Subscribe string `yaml:"subscribe"`
+	} `yaml:"databaseRecorder"`
 }
 
 func getAppConfig() (Config, error) {
@@ -49,7 +55,7 @@ func GetBrokerAddress() string {
 	return brokerAddress
 }
 
-func GetAlertManagerTopics() ([]string) {
+func GetAlertManagerTopics() []string {
 	config, err := getAppConfig()
 	if err != nil {
 		fmt.Printf("Error getting app config: %v", err)
@@ -62,4 +68,21 @@ func GetAlertManagerTopics() ([]string) {
 	alertManagerTopics := []string{alertManagerTopicSubscribe, alertManagerTopicPublish}
 
 	return alertManagerTopics
+}
+
+func GetDatabaseRecorderSettings() []string {
+	config, err := getAppConfig()
+	if err != nil {
+		fmt.Printf("Error getting app config: %v", err)
+		return []string{}
+	}
+
+	databaseRecorderBucket := config.DatabaseRecorder.Bucket
+	databaseRecorderOrg := config.DatabaseRecorder.Org
+	databaseRecorderUrl := config.DatabaseRecorder.Url
+	databaseRecorderSubscribe := config.DatabaseRecorder.Subscribe
+
+	databaseRecorderConfig := []string{databaseRecorderBucket, databaseRecorderOrg, databaseRecorderUrl, databaseRecorderSubscribe}
+
+	return databaseRecorderConfig
 }

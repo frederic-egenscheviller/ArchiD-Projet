@@ -49,8 +49,11 @@ func init() {
 func FetchSensorDataFromAPI(sensorInfo SensorInfo) (SensorData, error) {
 	apiKey := os.Getenv("METEO_FRANCE_API_KEY")
 
-	apiURL := fmt.Sprintf("https://public-api.meteofrance.fr/public/DPObs/v1/station/infrahoraire-6m?id_station=%s&format=json", sensorInfo.GeoIDInsee)
+	if apiKey == "" {
+		return SensorData{}, fmt.Errorf("no API key provided for Meteo France API")
+	}
 
+	apiURL := fmt.Sprintf("https://public-api.meteofrance.fr/public/DPObs/v1/station/infrahoraire-6m?id_station=%s&format=json", sensorInfo.GeoIDInsee)
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return SensorData{}, fmt.Errorf("error creating HTTP request: %v", err)
