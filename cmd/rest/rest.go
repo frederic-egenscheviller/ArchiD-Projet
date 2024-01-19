@@ -151,9 +151,12 @@ func getSensorsByAirportId(c *gin.Context) {
 }
 
 func getAllAirportData(c *gin.Context) {
-	id := c.Param("id")
-
-	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> filter(fn: (r) => r.AirportId == "%s")`, influxDBBucket, id)
+	query := fmt.Sprintf(`
+        from(bucket:"%s") 
+        |> range(start: 1970-01-01T00:00:00Z) 
+        |> group(columns: ["AirportId"])
+        |> last()`,
+		influxDBBucket)
 
 	// Query data from InfluxDB using the global client
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
@@ -189,7 +192,7 @@ func getAllAirportData(c *gin.Context) {
 		return
 	}
 
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No data found for the specified airport ID"})
+	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No data found for any airport"})
 }
 
 func getAirportDataById(c *gin.Context) {
