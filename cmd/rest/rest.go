@@ -28,14 +28,7 @@ type airport struct {
 	AirportId string `json:"id"`
 }
 
-var dataArr = []data{
-	{AirportId: "MRS", Date: "2024-01-16", Time: "12:00:00", Type: "temperature", Value: 20.0},
-	{AirportId: "MRS", Date: "2024-01-16", Time: "12:00:00", Type: "wind", Value: 3.100000},
-	{AirportId: "MRS", Date: "2024-01-16", Time: "12:00:00", Type: "pressure", Value: 1024.0},
-	{AirportId: "MRS", Date: "2024-01-16", Time: "14:15:00", Type: "temperature", Value: 24.3},
-	{AirportId: "MRS", Date: "2024-01-16", Time: "14:15:00", Type: "wind", Value: 2.0},
-	{AirportId: "MRS", Date: "2024-01-16", Time: "14:15:00", Type: "pressure", Value: 1020.0},
-}
+var dataArr []data
 
 func main() {
 	router := gin.Default()
@@ -51,6 +44,10 @@ func main() {
 	if err != nil {
 		return
 	}
+}
+
+func setDataArray(slice []data) {
+	dataArr = slice
 }
 
 func containsElement(slice []airport, element string) bool {
