@@ -48,9 +48,9 @@ func init() {
 
 type data struct {
 	AirportIATA string  `json:"airport"`
-	Datetime    string  `json:"_time"`
-	Type        string  `json:"_measurement"`
-	Value       float64 `json:"_value"`
+	Datetime    string  `json:"time"`
+	Type        string  `json:"measurement"`
+	Value       float64 `json:"value"`
 }
 
 type dataAverage struct {
@@ -61,7 +61,7 @@ type dataAverage struct {
 
 type sensor struct {
 	AirportIATA string `json:"airport"`
-	Measurement string `json:"type"`
+	Measurement string `json:"measurement"`
 }
 
 type airport struct {
@@ -74,11 +74,11 @@ func main() {
 	router := gin.Default()
 	router.GET("/airports", getAllAirport)
 	router.GET("/airports/data/", getAllAirportData)
-	router.GET("/airport/:id/data/", getAirportDataById)
-	router.GET("/airport/:id/sensors", getSensorsByAirportId)
-	router.GET("/airport/:id/data/range/:start/:end/:type", getAirportDataByDateRangesAndType)
-	router.GET("/airport/:id/average/:date", getAirportDataAverageByDate)
-	router.GET("/airport/:id/average/:date/:type", getAirportDataAverageByDateAndType)
+	router.GET("/airport/:iata/data/", getAirportDataByIATA)
+	router.GET("/airport/:iata/sensors", getSensorsByAirportIATA)
+	router.GET("/airport/:iata/data/range/:start/:end/:measurement", getAirportDataByDateRangesAndType)
+	router.GET("/airport/:iata/average/:date", getAirportDataAverageByDate)
+	router.GET("/airport/:iata/average/:date/:measurement", getAirportDataAverageByDateAndType)
 
 	err := router.Run("localhost:8080")
 	if err != nil {
@@ -100,19 +100,19 @@ func getAllAirport(c *gin.Context) {
 	for result.Next() {
 		value := result.Record().ValueByKey("airport")
 		if value != nil {
-			airportID, ok := value.(string)
+			airportIATA, ok := value.(string)
 			if ok {
-				ret = append(ret, airport{AirportIATA: airportID})
+				ret = append(ret, airport{AirportIATA: airportIATA})
 			}
 		}
 	}
 	c.IndentedJSON(http.StatusOK, ret)
 }
 
-func getSensorsByAirportId(c *gin.Context) {
-	id := c.Param("id")
+func getSensorsByAirportIATA(c *gin.Context) {
+	airportIATA := c.Param("iata")
 
-	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> filter(fn: (r) => r["airport"] == "%s") |> distinct(column: "_measurement")`, influxDBBucket, id)
+	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> filter(fn: (r) => r["airport"] == "%s") |> distinct(column: "_measurement")`, influxDBBucket, airportIATA)
 
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
 	if err != nil {
@@ -127,7 +127,7 @@ func getSensorsByAirportId(c *gin.Context) {
 		if value != nil {
 			sensorType, ok := value.(string)
 			if ok {
-				ret = append(ret, sensor{AirportIATA: id, Measurement: sensorType})
+				ret = append(ret, sensor{AirportIATA: airportIATA, Measurement: sensorType})
 			}
 		}
 	}
@@ -169,10 +169,10 @@ func getAllAirportData(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, ret)
 }
 
-func getAirportDataById(c *gin.Context) {
-	id := c.Param("id")
+func getAirportDataByIATA(c *gin.Context) {
+	airportIATA := c.Param("iata")
 
-	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> filter(fn: (r) => r["airport"] == "%s")`, influxDBBucket, id)
+	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> filter(fn: (r) => r["airport"] == "%s")`, influxDBBucket, airportIATA)
 
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
 	if err != nil {
@@ -208,8 +208,8 @@ func getAirportDataById(c *gin.Context) {
 }
 
 func getAirportDataByDateRangesAndType(c *gin.Context) {
-	id := c.Param("id")
-	dataType := c.Param("type")
+	airportIATA := c.Param("iata")
+	dataType := c.Param("measurement")
 	start := c.Param("start")
 	end := c.Param("end")
 
@@ -217,7 +217,7 @@ func getAirportDataByDateRangesAndType(c *gin.Context) {
         from(bucket: "%s")
   			|> range(start: %s, stop: %s)
   			|> filter(fn: (r) => r["airport"] == "%s" and r["_measurement"] == "%s")`,
-		influxDBBucket, start, end, id, dataType)
+		influxDBBucket, start, end, airportIATA, dataType)
 
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
 	if err != nil {
@@ -253,7 +253,7 @@ func getAirportDataByDateRangesAndType(c *gin.Context) {
 }
 
 func getAirportDataAverageByDate(c *gin.Context) {
-	id := c.Param("id")
+	airportIATA := c.Param("iata")
 	startDate := c.Param("date")
 
 	startDateFomatted, err := time.Parse("2006-01-02", startDate)
@@ -271,7 +271,7 @@ func getAirportDataAverageByDate(c *gin.Context) {
 		  |> filter(fn: (r) => r["airport"] == "%s")
 		  |> group(columns: ["_measurement"])
 		  |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)`,
-		influxDBBucket, startDate, endDate, id)
+		influxDBBucket, startDate, endDate, airportIATA)
 
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
 	if err != nil {
@@ -284,7 +284,7 @@ func getAirportDataAverageByDate(c *gin.Context) {
 		measurement := result.Record().ValueByKey("_measurement")
 		value := result.Record().ValueByKey("_value")
 		if value != nil {
-			ret = append(ret, dataAverage{AirportIATA: id, Measurement: measurement.(string), Value: value.(float64)})
+			ret = append(ret, dataAverage{AirportIATA: airportIATA, Measurement: measurement.(string), Value: value.(float64)})
 		}
 	}
 
@@ -297,9 +297,9 @@ func getAirportDataAverageByDate(c *gin.Context) {
 }
 
 func getAirportDataAverageByDateAndType(c *gin.Context) {
-	id := c.Param("id")
+	airportIATA := c.Param("iata")
 	startDate := c.Param("date")
-	measurement := c.Param("type")
+	dataType := c.Param("measurement")
 
 	startDateFomatted, err := time.Parse("2006-01-02", startDate)
 
@@ -315,7 +315,7 @@ func getAirportDataAverageByDateAndType(c *gin.Context) {
 		  |> range(start: %s, stop: %s)
 		  |> filter(fn: (r) => r["airport"] == "%s" and r["_measurement"] == "%s")
 		  |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)`,
-		influxDBBucket, startDate, endDate, id, measurement)
+		influxDBBucket, startDate, endDate, airportIATA, dataType)
 
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
 	if err != nil {
@@ -328,7 +328,7 @@ func getAirportDataAverageByDateAndType(c *gin.Context) {
 		measurement := result.Record().ValueByKey("_measurement")
 		value := result.Record().ValueByKey("_value")
 		if value != nil {
-			ret = append(ret, dataAverage{AirportIATA: id, Measurement: measurement.(string), Value: value.(float64)})
+			ret = append(ret, dataAverage{AirportIATA: airportIATA, Measurement: measurement.(string), Value: value.(float64)})
 		}
 	}
 
