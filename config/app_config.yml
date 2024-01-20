@@ -8,3 +8,6 @@ influxdb:
   org: ArchiD Team
   url: http://airportmqtt.ddns.net:8086
   subscribe: airports/+
+fileRecorder:
+  subscribe: airports/+
+  recordingPath: recordings
