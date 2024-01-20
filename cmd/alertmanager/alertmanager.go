@@ -4,17 +4,14 @@ import (
 	"ArchiD-Projet/internal/brokerconfiguration"
 	"ArchiD-Projet/internal/brokerutils"
 	"ArchiD-Projet/internal/mqttconnect"
-
 	"fmt"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"gopkg.in/yaml.v3"
 	"io"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-
-	"gopkg.in/yaml.v3"
-
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 type Thresholds struct {
@@ -147,9 +144,11 @@ func main() {
 		return
 	}
 
-	client.Subscribe(TOPIC, 1, nil)
-
-	for {
-		time.Sleep(1 * time.Second)
+	err = client.Subscribe(TOPIC, 1, nil)
+	if err != nil {
+		fmt.Println("Error subscribing to topic:", err)
+		return
 	}
+
+	mqttconnect.WaitForSignal()
 }

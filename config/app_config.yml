@@ -3,7 +3,7 @@ topics:
   alertManager:
     subscribe: airports/+
     publish: airports/alertManager/
-databaseRecorder:
+influxdb:
   bucket: AirportMQTT
   org: ArchiD Team
   url: http://airportmqtt.ddns.net:8086

@@ -1,6 +1,7 @@
 package main
 
 import (
+	brokerconfiguration "ArchiD-Projet/internal/brokerConfiguration"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
@@ -9,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 var influxDBAPIKey string
@@ -16,6 +18,7 @@ var influxDBURL string
 var influxDBBucket string
 var influxDBOrg string
 var influxDBClient influxdb2.Client
+var loc = time.Local
 
 func init() {
 	err := godotenv.Load()
@@ -23,44 +26,47 @@ func init() {
 		log.Fatal("Error loading .env file")
 	}
 
-	influxDBAPIKey = os.Getenv("INFLUX_DB_API_KEY")
-	influxDBURL = os.Getenv("INFLUX_DB_URL")
-	influxDBBucket = os.Getenv("INFLUX_DB_BUCKET")
-	influxDBOrg = os.Getenv("INFLUX_DB_ORG")
+	config := brokerconfiguration.GetInfluxdbSettings()
 
-	if influxDBAPIKey == "" || influxDBURL == "" || influxDBBucket == "" {
-		log.Fatal("Incomplete InfluxDB configuration in .env")
+	influxDBAPIKey = os.Getenv("INFLUX_DB_API_KEY")
+	influxDBBucket = config[0]
+	influxDBOrg = config[1]
+	influxDBURL = config[2]
+
+	loc, err = time.LoadLocation("Europe/Paris")
+	if err != nil {
+		log.Fatal("Error loading timezone")
+		return
 	}
 
-	// Create the InfluxDB client once
+	if influxDBAPIKey == "" || influxDBURL == "" || influxDBBucket == "" {
+		log.Fatal("Incomplete InfluxDB configuration in app_config.yml")
+	}
+
 	influxDBClient = influxdb2.NewClientWithOptions(influxDBURL, influxDBAPIKey, influxdb2.DefaultOptions())
 }
 
 type data struct {
-	AirportId string  `json:"id"`
-	Date      string  `json:"date"`
-	Time      string  `json:"time"`
-	Type      string  `json:"type"`
-	Value     float64 `json:"value"`
+	AirportIATA string  `json:"airport"`
+	Datetime    string  `json:"_time"`
+	Type        string  `json:"_measurement"`
+	Value       float64 `json:"_value"`
 }
 
 type dataAverage struct {
-	AirportId string  `json:"id"`
-	Type      string  `json:"type"`
-	Value     float64 `json:"value"`
+	AirportIATA string  `json:"airport"`
+	Measurement string  `json:"measurement"`
+	Value       float64 `json:"value"`
 }
 
 type sensor struct {
-	AirportId string `json:"id"`
-	Type      string `json:"type"`
+	AirportIATA string `json:"airport"`
+	Measurement string `json:"type"`
 }
 
 type airport struct {
-	AirportId string `json:"id"`
+	AirportIATA string `json:"airport"`
 }
-
-// Je sais pas si on en a encore besoin
-var dataArr []data
 
 func main() {
 	defer influxDBClient.Close()
@@ -80,14 +86,9 @@ func main() {
 	}
 }
 
-func setDataArray(slice []data) {
-	dataArr = slice
-}
-
 func getAllAirport(c *gin.Context) {
-	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> distinct(column: "AirportId")`, influxDBBucket)
+	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> group(columns: ["airport"]) |> distinct(column: "airport")`, influxDBBucket)
 
-	// Query data from InfluxDB using the global client
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error fetching data from InfluxDB"})
@@ -97,31 +98,22 @@ func getAllAirport(c *gin.Context) {
 
 	var ret []airport
 	for result.Next() {
-		// Extract values from the result
-		value := result.Record().ValueByKey("AirportId")
+		value := result.Record().ValueByKey("airport")
 		if value != nil {
 			airportID, ok := value.(string)
 			if ok {
-				ret = append(ret, airport{AirportId: airportID})
+				ret = append(ret, airport{AirportIATA: airportID})
 			}
 		}
 	}
-
-	// Check if any airports were found
-	if len(ret) != 0 {
-		c.IndentedJSON(http.StatusOK, ret)
-		return
-	}
-
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No airport found"})
+	c.IndentedJSON(http.StatusOK, ret)
 }
 
 func getSensorsByAirportId(c *gin.Context) {
 	id := c.Param("id")
 
-	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> filter(fn: (r) => r._measurement == "your_measurement" and r.AirportId == "%s") |> distinct(column: "Type")`, influxDBBucket, id)
+	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> filter(fn: (r) => r["airport"] == "%s") |> distinct(column: "_measurement")`, influxDBBucket, id)
 
-	// Query data from InfluxDB using the global client
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error fetching sensor data from InfluxDB"})
@@ -131,34 +123,24 @@ func getSensorsByAirportId(c *gin.Context) {
 
 	var ret []sensor
 	for result.Next() {
-		// Extract values from the result
-		value := result.Record().ValueByKey("Type")
+		value := result.Record().ValueByKey("_measurement")
 		if value != nil {
 			sensorType, ok := value.(string)
 			if ok {
-				ret = append(ret, sensor{AirportId: id, Type: sensorType})
+				ret = append(ret, sensor{AirportIATA: id, Measurement: sensorType})
 			}
 		}
 	}
 
-	// Check if any sensors were found
-	if len(ret) != 0 {
-		c.IndentedJSON(http.StatusOK, ret)
-		return
-	}
-
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No sensor found for the specified airport ID"})
+	c.IndentedJSON(http.StatusOK, ret)
 }
 
 func getAllAirportData(c *gin.Context) {
 	query := fmt.Sprintf(`
         from(bucket:"%s") 
-        |> range(start: 1970-01-01T00:00:00Z) 
-        |> group(columns: ["AirportId"])
-        |> last()`,
+        |> range(start: 1970-01-01T00:00:00Z)`,
 		influxDBBucket)
 
-	// Query data from InfluxDB using the global client
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error fetching data from InfluxDB"})
@@ -168,39 +150,30 @@ func getAllAirportData(c *gin.Context) {
 
 	var ret []data
 	for result.Next() {
-		// Extract values from the result
-		airportID := result.Record().ValueByKey("AirportId")
-		date := result.Record().ValueByKey("date")
-		time := result.Record().ValueByKey("time")
-		sensorType := result.Record().ValueByKey("Type")
-		value := result.Record().ValueByKey("value")
+		airportIATA := result.Record().ValueByKey("airport")
+		datetime := result.Record().ValueByKey("_time")
+		sensorType := result.Record().ValueByKey("_measurement")
+		value := result.Record().ValueByKey("_value")
+		datetimeUTC1 := datetime.(time.Time).In(loc).Format("2006-01-02 15:04:05")
 
-		if airportID != nil && date != nil && time != nil && sensorType != nil && value != nil {
+		if airportIATA != nil && datetime != nil && sensorType != nil && value != nil {
 			ret = append(ret, data{
-				AirportId: airportID.(string),
-				Date:      date.(string),
-				Time:      time.(string),
-				Type:      sensorType.(string),
-				Value:     value.(float64),
+				AirportIATA: airportIATA.(string),
+				Datetime:    datetimeUTC1,
+				Type:        sensorType.(string),
+				Value:       value.(float64),
 			})
 		}
 	}
 
-	// Check if any data were found
-	if len(ret) != 0 {
-		c.IndentedJSON(http.StatusOK, ret)
-		return
-	}
-
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No data found for any airport"})
+	c.IndentedJSON(http.StatusOK, ret)
 }
 
 func getAirportDataById(c *gin.Context) {
 	id := c.Param("id")
 
-	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> filter(fn: (r) => r.AirportId == "%s")`, influxDBBucket, id)
+	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> filter(fn: (r) => r["airport"] == "%s")`, influxDBBucket, id)
 
-	// Query data from InfluxDB using the global client
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error fetching data from InfluxDB"})
@@ -210,25 +183,22 @@ func getAirportDataById(c *gin.Context) {
 
 	var ret []data
 	for result.Next() {
-		// Extract values from the result
-		airportID := result.Record().ValueByKey("AirportId")
-		date := result.Record().ValueByKey("date")
-		time := result.Record().ValueByKey("time")
-		sensorType := result.Record().ValueByKey("Type")
-		value := result.Record().ValueByKey("value")
+		airportIATA := result.Record().ValueByKey("airport")
+		datetime := result.Record().ValueByKey("_time")
+		sensorType := result.Record().ValueByKey("_measurement")
+		value := result.Record().ValueByKey("_value")
+		datetimeUTC1 := datetime.(time.Time).In(loc).Format("2006-01-02 15:04:05")
 
-		if airportID != nil && date != nil && time != nil && sensorType != nil && value != nil {
+		if airportIATA != nil && datetime != nil && sensorType != nil && value != nil {
 			ret = append(ret, data{
-				AirportId: airportID.(string),
-				Date:      date.(string),
-				Time:      time.(string),
-				Type:      sensorType.(string),
-				Value:     value.(float64),
+				AirportIATA: airportIATA.(string),
+				Datetime:    datetimeUTC1,
+				Type:        sensorType.(string),
+				Value:       value.(float64),
 			})
 		}
 	}
 
-	// Check if any data were found
 	if len(ret) != 0 {
 		c.IndentedJSON(http.StatusOK, ret)
 		return
@@ -244,12 +214,11 @@ func getAirportDataByDateRangesAndType(c *gin.Context) {
 	end := c.Param("end")
 
 	query := fmt.Sprintf(`
-        from(bucket:"%s") 
-        |> range(start: %s, stop: %s) 
-        |> filter(fn: (r) => r.AirportId == "%s" and r.Type == "%s")`,
+        from(bucket: "%s")
+  			|> range(start: %s, stop: %s)
+  			|> filter(fn: (r) => r["airport"] == "%s" and r["_measurement"] == "%s")`,
 		influxDBBucket, start, end, id, dataType)
 
-	// Query data from InfluxDB using the global client
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error fetching data from InfluxDB"})
@@ -259,25 +228,22 @@ func getAirportDataByDateRangesAndType(c *gin.Context) {
 
 	var ret []data
 	for result.Next() {
-		// Extract values from the result
-		airportID := result.Record().ValueByKey("AirportId")
-		date := result.Record().ValueByKey("date")
-		time := result.Record().ValueByKey("time")
-		sensorType := result.Record().ValueByKey("Type")
-		value := result.Record().ValueByKey("value")
+		airportIATA := result.Record().ValueByKey("airport")
+		datetime := result.Record().ValueByKey("_time")
+		sensorType := result.Record().ValueByKey("_measurement")
+		value := result.Record().ValueByKey("_value")
+		datetimeUTC1 := datetime.(time.Time).In(loc).Format("2006-01-02 15:04:05")
 
-		if airportID != nil && date != nil && time != nil && sensorType != nil && value != nil {
+		if airportIATA != nil && datetime != nil && sensorType != nil && value != nil {
 			ret = append(ret, data{
-				AirportId: airportID.(string),
-				Date:      date.(string),
-				Time:      time.(string),
-				Type:      sensorType.(string),
-				Value:     value.(float64),
+				AirportIATA: airportIATA.(string),
+				Datetime:    datetimeUTC1,
+				Type:        sensorType.(string),
+				Value:       value.(float64),
 			})
 		}
 	}
 
-	// Check if any data were found
 	if len(ret) != 0 {
 		c.IndentedJSON(http.StatusOK, ret)
 		return
@@ -288,37 +254,40 @@ func getAirportDataByDateRangesAndType(c *gin.Context) {
 
 func getAirportDataAverageByDate(c *gin.Context) {
 	id := c.Param("id")
-	date := c.Param("date")
+	startDate := c.Param("date")
 
-	var dataTypes = []string{"temperature", "wind", "pressure"}
+	startDateFomatted, err := time.Parse("2006-01-02", startDate)
+
+	endDate := startDateFomatted.AddDate(0, 0, 1).Format("2006-01-02")
+
+	startDate = startDate + "T00:00:00Z"
+	endDate = endDate + "T00:00:00Z"
+
 	var ret []dataAverage
 
-	for _, dataType := range dataTypes {
-		query := fmt.Sprintf(`
-            from(bucket:"%s") 
-            |> range(start: %s, stop: %s) 
-            |> filter(fn: (r) => r.AirportId == "%s" and r.Type == "%s" and r.date == "%s")
-            |> mean(column: "value")`,
-			influxDBBucket, date, date, id, dataType, date)
+	query := fmt.Sprintf(`
+		from(bucket: "%s")
+		  |> range(start: %s, stop: %s)
+		  |> filter(fn: (r) => r["airport"] == "%s")
+		  |> group(columns: ["_measurement"])
+		  |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)`,
+		influxDBBucket, startDate, endDate, id)
 
-		// Query data from InfluxDB using the global client
-		result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
-		if err != nil {
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error fetching data from InfluxDB"})
-			return
-		}
-		defer result.Close()
+	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error fetching data from InfluxDB"})
+		return
+	}
+	defer result.Close()
 
-		for result.Next() {
-			// Extract values from the result
-			value := result.Record().Value()
-			if value != nil {
-				ret = append(ret, dataAverage{AirportId: id, Type: dataType, Value: value.(float64)})
-			}
+	for result.Next() {
+		measurement := result.Record().ValueByKey("_measurement")
+		value := result.Record().ValueByKey("_value")
+		if value != nil {
+			ret = append(ret, dataAverage{AirportIATA: id, Measurement: measurement.(string), Value: value.(float64)})
 		}
 	}
 
-	// Check if any data were found
 	if len(ret) != 0 {
 		c.IndentedJSON(http.StatusOK, ret)
 		return
@@ -329,17 +298,25 @@ func getAirportDataAverageByDate(c *gin.Context) {
 
 func getAirportDataAverageByDateAndType(c *gin.Context) {
 	id := c.Param("id")
-	date := c.Param("date")
-	dataType := c.Param("type")
+	startDate := c.Param("date")
+	measurement := c.Param("type")
+
+	startDateFomatted, err := time.Parse("2006-01-02", startDate)
+
+	endDate := startDateFomatted.AddDate(0, 0, 1).Format("2006-01-02")
+
+	startDate = startDate + "T00:00:00Z"
+	endDate = endDate + "T00:00:00Z"
+
+	var ret []dataAverage
 
 	query := fmt.Sprintf(`
-        from(bucket:"%s") 
-        |> range(start: %s, stop: %s) 
-        |> filter(fn: (r) => r.AirportId == "%s" and r.Type == "%s" and r.date == "%s")
-        |> mean(column: "value")`,
-		influxDBBucket, date, date, id, dataType, date)
+		from(bucket: "%s")
+		  |> range(start: %s, stop: %s)
+		  |> filter(fn: (r) => r["airport"] == "%s" and r["_measurement"] == "%s")
+		  |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)`,
+		influxDBBucket, startDate, endDate, id, measurement)
 
-	// Query data from InfluxDB using the global client
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error fetching data from InfluxDB"})
@@ -347,40 +324,18 @@ func getAirportDataAverageByDateAndType(c *gin.Context) {
 	}
 	defer result.Close()
 
-	var ret []dataAverage
 	for result.Next() {
-		// Extract values from the result
-		value := result.Record().Value()
+		measurement := result.Record().ValueByKey("_measurement")
+		value := result.Record().ValueByKey("_value")
 		if value != nil {
-			ret = append(ret, dataAverage{AirportId: id, Type: dataType, Value: value.(float64)})
+			ret = append(ret, dataAverage{AirportIATA: id, Measurement: measurement.(string), Value: value.(float64)})
 		}
 	}
 
-	// Check if any data were found
 	if len(ret) != 0 {
 		c.IndentedJSON(http.StatusOK, ret)
 		return
 	}
 
 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No data found for the specified parameters"})
-}
-
-// Je sais pas si on en a encore besoin
-func getValueListByType(d []data, dataType string) []data {
-	var ret []data
-	for _, a := range d {
-		if a.Type == dataType {
-			ret = append(ret, a)
-		}
-	}
-	return ret
-}
-
-// Je sais pas si on en a encore besoin
-func getAverageValue(data []data) float64 {
-	var sum float64
-	for _, a := range data {
-		sum += a.Value
-	}
-	return sum / float64(len(data))
 }

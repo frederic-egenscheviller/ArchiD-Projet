@@ -2,10 +2,9 @@ package brokerconfiguration
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"io"
 	"os"
-
-	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
@@ -16,12 +15,12 @@ type Config struct {
 			Publish   string `yaml:"publish"`
 		} `yaml:"alertManager"`
 	} `yaml:"topics"`
-	DatabaseRecorder struct {
+	InfluxDB struct {
 		Bucket    string `yaml:"bucket"`
 		Org       string `yaml:"org"`
 		Url       string `yaml:"url"`
 		Subscribe string `yaml:"subscribe"`
-	} `yaml:"databaseRecorder"`
+	} `yaml:"influxdb"`
 }
 
 func getAppConfig() (Config, error) {
@@ -70,19 +69,19 @@ func GetAlertManagerTopics() []string {
 	return alertManagerTopics
 }
 
-func GetDatabaseRecorderSettings() []string {
+func GetInfluxdbSettings() []string {
 	config, err := getAppConfig()
 	if err != nil {
 		fmt.Printf("Error getting app config: %v", err)
 		return []string{}
 	}
 
-	databaseRecorderBucket := config.DatabaseRecorder.Bucket
-	databaseRecorderOrg := config.DatabaseRecorder.Org
-	databaseRecorderUrl := config.DatabaseRecorder.Url
-	databaseRecorderSubscribe := config.DatabaseRecorder.Subscribe
+	influxdbBucket := config.InfluxDB.Bucket
+	influxdbOrg := config.InfluxDB.Org
+	influxdbUrl := config.InfluxDB.Url
+	influxdbSubscribe := config.InfluxDB.Subscribe
 
-	databaseRecorderConfig := []string{databaseRecorderBucket, databaseRecorderOrg, databaseRecorderUrl, databaseRecorderSubscribe}
+	databaseRecorderConfig := []string{influxdbBucket, influxdbOrg, influxdbUrl, influxdbSubscribe}
 
 	return databaseRecorderConfig
 }

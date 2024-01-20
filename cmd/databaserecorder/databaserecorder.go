@@ -9,6 +9,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/joho/godotenv"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -16,7 +17,7 @@ import (
 )
 
 var (
-	config       = brokerconfiguration.GetDatabaseRecorderSettings()
+	config       = brokerconfiguration.GetInfluxdbSettings()
 	BROKER       = brokerconfiguration.GetBrokerAddress()
 	BUCKET       = config[0]
 	ORG          = config[1]
@@ -28,35 +29,38 @@ var (
 func init() {
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("Error loading .env file:", err)
+		log.Fatal("Error loading .env file:", err)
 	}
 }
 
 func onMessageReceived(_ mqtt.Client, message mqtt.Message) {
-
 	payload := string(message.Payload())
 	data := strings.Split(payload, " ")
 
-	submittedTimestamp := data[0] + " " + data[1]
+	submittedTimestamp := data[0] + "T" + data[1] + "Z"
 	sensor := data[2]
 	value, err := strconv.ParseFloat(data[3], 64)
 	if err != nil {
-		fmt.Println("Failed to convert value to integer")
+		log.Fatal("Failed to convert value to float64")
 		return
 	}
 
-	loc, _ := time.LoadLocation("Europe/Paris")
-	th, _ := time.ParseInLocation("02/01/2006 15:04:05", submittedTimestamp, loc)
+	timestamp, err := time.Parse(time.RFC3339, submittedTimestamp)
+	if err != nil {
+		fmt.Println("Failed to parse timestamp:", err)
+		return
+	}
 
 	writeAPI := influxClient.WriteAPIBlocking(ORG, BUCKET)
 
 	p := influxdb2.NewPointWithMeasurement(sensor).
 		AddTag("airport", brokerutils.GetAirportCodeFromTopic(message.Topic())).
 		AddField("value", value).
-		SetTime(th)
+		SetTime(timestamp)
 
 	err = writeAPI.WritePoint(context.Background(), p)
 	if err != nil {
+		fmt.Println("Failed to write data point:", err)
 		return
 	}
 }
