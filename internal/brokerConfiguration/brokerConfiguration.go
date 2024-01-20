@@ -21,6 +21,10 @@ type Config struct {
 		Url       string `yaml:"url"`
 		Subscribe string `yaml:"subscribe"`
 	} `yaml:"influxdb"`
+	FileRecorder struct {
+		Subscribe     string `yaml:"subscribe"`
+		RecordingPath string `yaml:"recordingPath"`
+	} `yaml:"fileRecorder"`
 }
 
 func getAppConfig() (Config, error) {
@@ -84,4 +88,19 @@ func GetInfluxdbSettings() []string {
 	databaseRecorderConfig := []string{influxdbBucket, influxdbOrg, influxdbUrl, influxdbSubscribe}
 
 	return databaseRecorderConfig
+}
+
+func GetFileRecorderSettings() []string {
+	config, err := getAppConfig()
+	if err != nil {
+		fmt.Printf("Error getting app config: %v", err)
+		return []string{}
+	}
+
+	fileRecorderTopic := config.FileRecorder.Subscribe
+	fileRecorderFolder := config.FileRecorder.RecordingPath
+
+	fileRecorderConfig := []string{fileRecorderTopic, fileRecorderFolder}
+
+	return fileRecorderConfig
 }
