@@ -1,0 +1,5 @@
+<div id="research-bar">
+  <p-dropdown [style]="{'minWidth':'220px'}" [options]="airports" [(ngModel)]="selectedAirport" optionLabel="code" [showClear]="true" placeholder="Select an Airport" (onChange)="onAirportSelected()"></p-dropdown>
+  <p-multiSelect [disabled]="sensors.length === 0" [style]="{'minWidth':'220px'}" [options]="sensors" [(ngModel)]="selectedSensors" optionLabel="name" placeholder="Select sensors" (onChange)="onSensorsChange()"></p-multiSelect>
+  <p-calendar [disabled]="selectedSensors.length === 0" [(ngModel)]="rangeDates" selectionMode="range" [readonlyInput]="true" (ngModelChange)="onDateRangeChange()"></p-calendar>
+</div>
