@@ -1,4 +1,4 @@
-import {Component, EventEmitter, OnInit, Output, signal} from '@angular/core';
+import {Component, EventEmitter, OnInit, Output} from '@angular/core';
 import {AirportApiService} from "../services/airport-api.service";
 
 interface Airport {
