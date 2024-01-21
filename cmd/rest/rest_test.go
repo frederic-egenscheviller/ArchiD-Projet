@@ -141,8 +141,8 @@ func TestGetAirportDataAverageByDateAndType(t *testing.T) {
 func setupRouter() *gin.Engine {
 	router := gin.Default()
 	setDataArray(dataArrTest)
-	router.GET("/airports", getAllAirport)
-	router.GET("/airports/data/", getAllAirportData)
+	router.GET("/airports", getAllAirports)
+	router.GET("/airports/data/", getAllAirportsData)
 	router.GET("/airport/:id/data/", getAirportDataByIATA)
 	router.GET("/airport/:id/sensors", getSensorsByAirportIATA)
 	router.GET("/airport/:id/data/range/:start/:end/:type", getAirportDataByDateRangesAndType)

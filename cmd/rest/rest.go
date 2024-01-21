@@ -70,10 +70,9 @@ type airport struct {
 
 func main() {
 	defer influxDBClient.Close()
-
 	router := gin.Default()
-	router.GET("/airports", getAllAirport)
-	router.GET("/airports/data/", getAllAirportData)
+	router.GET("/airports", getAllAirports)
+	router.GET("/airports/data/", getAllAirportsData)
 	router.GET("/airport/:iata/data/", getAirportDataByIATA)
 	router.GET("/airport/:iata/sensors", getSensorsByAirportIATA)
 	router.GET("/airport/:iata/data/range/:start/:end/:measurement", getAirportDataByDateRangesAndType)
@@ -86,7 +85,8 @@ func main() {
 	}
 }
 
-func getAllAirport(c *gin.Context) {
+func getAllAirports(c *gin.Context) {
+	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
 	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> group(columns: ["airport"]) |> distinct(column: "airport")`, influxDBBucket)
 
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
@@ -110,6 +110,7 @@ func getAllAirport(c *gin.Context) {
 }
 
 func getSensorsByAirportIATA(c *gin.Context) {
+	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
 	airportIATA := c.Param("iata")
 
 	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> filter(fn: (r) => r["airport"] == "%s") |> distinct(column: "_measurement")`, influxDBBucket, airportIATA)
@@ -131,11 +132,11 @@ func getSensorsByAirportIATA(c *gin.Context) {
 			}
 		}
 	}
-
 	c.IndentedJSON(http.StatusOK, ret)
 }
 
-func getAllAirportData(c *gin.Context) {
+func getAllAirportsData(c *gin.Context) {
+	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
 	query := fmt.Sprintf(`
         from(bucket:"%s") 
         |> range(start: 1970-01-01T00:00:00Z)`,
@@ -165,11 +166,11 @@ func getAllAirportData(c *gin.Context) {
 			})
 		}
 	}
-
 	c.IndentedJSON(http.StatusOK, ret)
 }
 
 func getAirportDataByIATA(c *gin.Context) {
+	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
 	airportIATA := c.Param("iata")
 
 	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> filter(fn: (r) => r["airport"] == "%s")`, influxDBBucket, airportIATA)
@@ -203,11 +204,12 @@ func getAirportDataByIATA(c *gin.Context) {
 		c.IndentedJSON(http.StatusOK, ret)
 		return
 	}
-
 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No data found for the specified airport ID"})
 }
 
 func getAirportDataByDateRangesAndType(c *gin.Context) {
+	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
+
 	airportIATA := c.Param("iata")
 	dataType := c.Param("measurement")
 	start := c.Param("start")
@@ -248,11 +250,12 @@ func getAirportDataByDateRangesAndType(c *gin.Context) {
 		c.IndentedJSON(http.StatusOK, ret)
 		return
 	}
-
 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No data found for the specified parameters"})
 }
 
 func getAirportDataAverageByDate(c *gin.Context) {
+	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
+
 	airportIATA := c.Param("iata")
 	startDate := c.Param("date")
 
@@ -292,11 +295,12 @@ func getAirportDataAverageByDate(c *gin.Context) {
 		c.IndentedJSON(http.StatusOK, ret)
 		return
 	}
-
 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No data found for the specified parameters"})
 }
 
 func getAirportDataAverageByDateAndType(c *gin.Context) {
+	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
+
 	airportIATA := c.Param("iata")
 	startDate := c.Param("date")
 	dataType := c.Param("measurement")
