@@ -21,7 +21,7 @@ type APIResponse struct {
 	ValidityTime  time.Time `json:"validity_time"`
 	T             float64   `json:"t"`
 	Ff            float64   `json:"ff"`
-	Pres          int       `json:"pres"`
+	Pres          float64   `json:"pres"`
 }
 
 type SensorData struct {

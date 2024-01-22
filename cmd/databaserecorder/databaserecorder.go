@@ -50,6 +50,12 @@ func onMessageReceived(_ mqtt.Client, message mqtt.Message) {
 		return
 	}
 
+	// The timestamp is in UTC+1, and needs to be converted to UTC
+	timestamp = timestamp.Add(time.Hour * -1)
+	// The timestamp is in UTC, and needs to be converted to UTC+1
+	utcPlusOne := time.FixedZone("CET", 3600)
+	timestamp = timestamp.In(utcPlusOne)
+
 	writeAPI := influxClient.WriteAPIBlocking(ORG, BUCKET)
 
 	p := influxdb2.NewPointWithMeasurement(sensor).
