@@ -5,6 +5,7 @@ import (
 	"ArchiD-Projet/internal/mqttconnect"
 	"fmt"
 	"gopkg.in/yaml.v3"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -55,7 +56,7 @@ func LoadSensorConfigs(filename string) (RetrievedSensorsConfig, error) {
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		fmt.Println(configs)
+		log.Fatal("Error reading sensor configuration file", err)
 		return configs, err
 	}
 
@@ -100,7 +101,7 @@ func (sensor *Sensor) StartMonitoring() {
 		for range ticker.C {
 			sensorData, err := meteofranceAPI.FetchSensorDataFromAPI(meteofranceAPI.SensorInfo(sensor.info))
 			if err != nil {
-				fmt.Println("Error fetching sensor data from API:", err)
+				log.Println("Error fetching sensor data from API:", err)
 				continue
 			}
 			sensor.PublishSensorData(SensorData(sensorData))
@@ -116,8 +117,7 @@ func LoadSensors(retrievedSensorsConfig RetrievedSensorsConfig) {
 	for _, sensorInfo := range retrievedSensorsConfig.Sensors {
 		client, err := mqttconnect.NewClient(retrievedSensorsConfig.BrokerAddress, sensorInfo.ClientID, nil)
 		if err != nil {
-			fmt.Printf("Error creating MQTT client for %s: %v\n", sensorInfo.ClientID, err)
-			continue
+			log.Fatalf("Error creating MQTT client for %s: %v\n", sensorInfo.ClientID, err)
 		}
 
 		config := SensorConfig{

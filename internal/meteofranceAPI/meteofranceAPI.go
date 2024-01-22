@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/joho/godotenv"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -42,7 +43,7 @@ type SensorInfo struct {
 func init() {
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("Error loading .env file:", err)
+		log.Fatal("Error loading .env file:", err)
 	}
 }
 
@@ -70,7 +71,7 @@ func FetchSensorDataFromAPI(sensorInfo SensorInfo) (SensorData, error) {
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			fmt.Println("Error closing response body:", err)
+			log.Println("Error closing response body:", err)
 		}
 	}(resp.Body)
 

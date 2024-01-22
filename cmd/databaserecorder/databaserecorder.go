@@ -5,7 +5,6 @@ import (
 	brokerutils "ArchiD-Projet/internal/brokerUtils"
 	"ArchiD-Projet/internal/mqttconnect"
 	"context"
-	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/joho/godotenv"
@@ -41,13 +40,13 @@ func onMessageReceived(_ mqtt.Client, message mqtt.Message) {
 	sensor := data[2]
 	value, err := strconv.ParseFloat(data[3], 64)
 	if err != nil {
-		log.Fatal("Failed to convert value to float64")
+		log.Println("Failed to convert value to float64", err)
 		return
 	}
 
 	timestamp, err := time.Parse(time.RFC3339, submittedTimestamp)
 	if err != nil {
-		fmt.Println("Failed to parse timestamp:", err)
+		log.Println("Failed to parse timestamp:", err)
 		return
 	}
 
@@ -60,7 +59,7 @@ func onMessageReceived(_ mqtt.Client, message mqtt.Message) {
 
 	err = writeAPI.WritePoint(context.Background(), p)
 	if err != nil {
-		fmt.Println("Failed to write data point:", err)
+		log.Println("Failed to write data point:", err)
 		return
 	}
 }
@@ -68,13 +67,13 @@ func onMessageReceived(_ mqtt.Client, message mqtt.Message) {
 func main() {
 	apiKey := os.Getenv("INFLUX_DB_API_KEY")
 	if apiKey == "" {
-		fmt.Println("INFLUX_DB_API_KEY environment variable not set")
+		log.Fatal("INFLUX_DB_API_KEY environment variable not set")
 		return
 	}
 	influxClient = influxdb2.NewClient(URL, apiKey)
 	client, err := mqttconnect.NewClient(BROKER, "database_recorder", onMessageReceived)
 	if err != nil {
-		fmt.Println("Error creating MQTT client:", err)
+		log.Fatal("Error creating MQTT client:", err)
 		return
 	}
 

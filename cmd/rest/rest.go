@@ -32,7 +32,7 @@ var loc = time.Local
 func init() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatal("Error loading .env file", err)
 	}
 
 	config := brokerconfiguration.GetInfluxdbSettings()
@@ -44,7 +44,7 @@ func init() {
 
 	loc, err = time.LoadLocation("Europe/Paris")
 	if err != nil {
-		log.Fatal("Error loading timezone")
+		log.Println("Error loading timezone", err)
 		return
 	}
 

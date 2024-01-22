@@ -1,9 +1,9 @@
 package brokerconfiguration
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v3"
 	"io"
+	"log"
 	"os"
 )
 
@@ -30,7 +30,7 @@ type Config struct {
 func getAppConfig() (Config, error) {
 	yamlFile, err := os.Open("config/app_config.yml")
 	if err != nil {
-		fmt.Println("Error reading app config file:", err)
+		log.Fatal("Error reading app config file:", err)
 		return Config{}, err
 	}
 	defer yamlFile.Close()
@@ -40,7 +40,7 @@ func getAppConfig() (Config, error) {
 	var config Config
 	err = yaml.Unmarshal(byteValue, &config)
 	if err != nil {
-		fmt.Println("Error unmarshalling YAML:", err)
+		log.Fatal("Error unmarshalling YAML:", err)
 		return Config{}, err
 	}
 	return config, nil
@@ -49,7 +49,7 @@ func getAppConfig() (Config, error) {
 func GetBrokerAddress() string {
 	config, err := getAppConfig()
 	if err != nil {
-		fmt.Printf("Error getting app config: %v", err)
+		log.Fatalf("Error getting app config: %v", err)
 		return ""
 	}
 
@@ -61,7 +61,7 @@ func GetBrokerAddress() string {
 func GetAlertManagerTopics() []string {
 	config, err := getAppConfig()
 	if err != nil {
-		fmt.Printf("Error getting app config: %v", err)
+		log.Fatalf("Error getting app config: %v", err)
 		return []string{}
 	}
 
@@ -76,7 +76,7 @@ func GetAlertManagerTopics() []string {
 func GetInfluxdbSettings() []string {
 	config, err := getAppConfig()
 	if err != nil {
-		fmt.Printf("Error getting app config: %v", err)
+		log.Fatalf("Error getting app config: %v", err)
 		return []string{}
 	}
 
@@ -93,7 +93,7 @@ func GetInfluxdbSettings() []string {
 func GetFileRecorderSettings() []string {
 	config, err := getAppConfig()
 	if err != nil {
-		fmt.Printf("Error getting app config: %v", err)
+		log.Fatalf("Error getting app config: %v", err)
 		return []string{}
 	}
 

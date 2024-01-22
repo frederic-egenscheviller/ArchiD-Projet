@@ -1,8 +1,8 @@
 package mqttconnect
 
 import (
-	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"log"
 	"os"
 	"os/signal"
 )
@@ -42,14 +42,14 @@ func (m *Client) Subscribe(topic string, qos byte, callback mqtt.MessageHandler)
 
 func (m *Client) Disconnect() {
 	m.client.Disconnect(250)
-	fmt.Println("Disconnected from MQTT broker")
+	log.Print("Disconnected from MQTT broker")
 }
 
 func (m *Client) Unsubscribe(topic string) error {
 	if token := m.client.Unsubscribe(topic); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
-	fmt.Printf("Unsubscribed from topic %s\n", topic)
+	log.Printf("Unsubscribed from topic %s\n\n", topic)
 	return nil
 }
 

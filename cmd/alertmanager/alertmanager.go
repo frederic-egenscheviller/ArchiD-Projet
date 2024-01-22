@@ -8,6 +8,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"gopkg.in/yaml.v3"
 	"io"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -45,7 +46,7 @@ var (
 func getThresholds() (Thresholds, error) {
 	yamlFile, err := os.Open("config/threshold_config.yml")
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal("Error opening threshold configuration file:", err)
 		return Thresholds{}, err
 	}
 	defer yamlFile.Close()
@@ -56,7 +57,7 @@ func getThresholds() (Thresholds, error) {
 
 	err = yaml.Unmarshal(byteValue, &thresholds)
 	if err != nil {
-		fmt.Println("Error unmarshalling YAML:", err)
+		log.Fatal("Error unmarshalling YAML:", err)
 		return Thresholds{}, err
 	}
 
@@ -70,7 +71,7 @@ func getAlertTopicFromMessageTopic(topic string) string {
 func getSeasonFromTimestamp(timestamp string) string {
 	t, err := time.Parse("2006-01-02 15:04:05", timestamp)
 	if err != nil {
-		fmt.Println("Error parsing timestamp:", err)
+		log.Println("Error parsing timestamp:", err)
 		return ""
 	}
 
@@ -86,7 +87,7 @@ func getSeasonFromTimestamp(timestamp string) string {
 func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 	thresholds, err := getThresholds()
 	if err != nil {
-		fmt.Println("Error getting thresholds:", err)
+		log.Println("Error getting thresholds:", err)
 		return
 	}
 
@@ -97,7 +98,7 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 	sensor := data[2]
 	value, err := strconv.ParseFloat(data[3], 64)
 	if err != nil {
-		fmt.Println("Failed to convert value to integer")
+		log.Fatal("Failed to convert value to integer", err)
 		return
 	}
 
@@ -116,7 +117,7 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 		} else if season == "winter" {
 			minThreshold, maxThreshold = thresholds.Pressure.Winter.Min, thresholds.Pressure.Winter.Max
 		} else {
-			fmt.Println("Error getting season from timestamp")
+			log.Println("Error getting season from timestamp")
 			return
 		}
 
@@ -132,7 +133,7 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 			token.Wait()
 		}
 	default:
-		fmt.Printf("Unknown sensor: %s\n", sensor)
+		log.Fatalf("Unknown sensor: %s\n", sensor)
 	}
 
 }
@@ -140,13 +141,13 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 func main() {
 	client, err := mqttconnect.NewClient(BROKER, "alert_manager", onMessageReceived)
 	if err != nil {
-		fmt.Println("Error creating MQTT client:", err)
+		log.Fatal("Error creating MQTT client:", err)
 		return
 	}
 
 	err = client.Subscribe(TOPIC, 1, nil)
 	if err != nil {
-		fmt.Println("Error subscribing to topic:", err)
+		log.Println("Error subscribing to topic:", err)
 		return
 	}
 
