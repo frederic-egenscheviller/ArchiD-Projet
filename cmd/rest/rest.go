@@ -1,11 +1,20 @@
 package main
 
+// @title ArchiD-Projet API
+// @description This is the API for the ArchiD-Projet project
+// @version 1
+// @host localhost:8080
+// @BasePath /
+
 import (
+	"ArchiD-Projet/cmd/rest/docs"
 	brokerconfiguration "ArchiD-Projet/internal/brokerConfiguration"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/joho/godotenv"
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"golang.org/x/net/context"
 	"log"
 	"net/http"
@@ -71,6 +80,9 @@ type airport struct {
 func main() {
 	defer influxDBClient.Close()
 	router := gin.Default()
+
+	docs.SwaggerInfo.BasePath = "/"
+
 	router.GET("/airports", getAllAirports)
 	router.GET("/airports/data/", getAllAirportsData)
 	router.GET("/airport/:iata/data/", getAirportDataByIATA)
@@ -79,12 +91,21 @@ func main() {
 	router.GET("/airport/:iata/average/:date", getAirportDataAverageByDate)
 	router.GET("/airport/:iata/average/:date/:measurement", getAirportDataAverageByDateAndType)
 
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+
 	err := router.Run("localhost:8080")
 	if err != nil {
 		log.Fatal("Error starting Gin router:", err)
 	}
 }
 
+// @BasePath /
+// @Summary Get all airports
+// @Description Get all airports
+// @Accept json
+// @Produce json
+// @Success 200 {array} airport
+// @Router /airports [get]
 func getAllAirports(c *gin.Context) {
 	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
 	query := fmt.Sprintf(`from(bucket:"%s") |> range(start: 1970-01-01T00:00:00Z) |> group(columns: ["airport"]) |> distinct(column: "airport")`, influxDBBucket)
@@ -109,6 +130,14 @@ func getAllAirports(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, ret)
 }
 
+// @BasePath /
+// @Summary Get all sensors for an airport
+// @Description Get all sensors for an airport
+// @Accept json
+// @Produce json
+// @Param iata path string true "Airport IATA code"
+// @Success 200 {array} sensor
+// @Router /airport/{iata}/sensors [get]
 func getSensorsByAirportIATA(c *gin.Context) {
 	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
 	airportIATA := c.Param("iata")
@@ -135,6 +164,13 @@ func getSensorsByAirportIATA(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, ret)
 }
 
+// @BasePath /
+// @Summary Get all data for all airports
+// @Description Get all data for all airports
+// @Accept json
+// @Produce json
+// @Success 200 {array} data
+// @Router /airports/data [get]
 func getAllAirportsData(c *gin.Context) {
 	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
 	query := fmt.Sprintf(`
@@ -169,6 +205,14 @@ func getAllAirportsData(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, ret)
 }
 
+// @BasePath /
+// @Summary Get all data for an airport
+// @Description Get all data for an airport
+// @Accept json
+// @Produce json
+// @Param iata path string true "Airport IATA code"
+// @Success 200 {array} data
+// @Router /airport/{iata}/data [get]
 func getAirportDataByIATA(c *gin.Context) {
 	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
 	airportIATA := c.Param("iata")
@@ -207,6 +251,17 @@ func getAirportDataByIATA(c *gin.Context) {
 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No data found for the specified airport ID"})
 }
 
+// @BasePath /
+// @Summary Get all data for an airport between two dates
+// @Description Get all data for an airport between two dates
+// @Accept json
+// @Produce json
+// @Param iata path string true "Airport IATA code"
+// @Param start path string true "Start date"
+// @Param end path string true "End date"
+// @Param measurement path string true "Measurement type"
+// @Success 200 {array} data
+// @Router /airport/{iata}/data/range/{start}/{end}/{measurement} [get]
 func getAirportDataByDateRangesAndType(c *gin.Context) {
 	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
 
@@ -253,6 +308,15 @@ func getAirportDataByDateRangesAndType(c *gin.Context) {
 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No data found for the specified parameters"})
 }
 
+// @BasePath /
+// @Summary Get average data for an airport for a date
+// @Description Get average data for an airport for a date
+// @Accept json
+// @Produce json
+// @Param iata path string true "Airport IATA code"
+// @Param date path string true "Date"
+// @Success 200 {array} dataAverage
+// @Router /airport/{iata}/average/{date} [get]
 func getAirportDataAverageByDate(c *gin.Context) {
 	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
 
@@ -298,6 +362,16 @@ func getAirportDataAverageByDate(c *gin.Context) {
 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "No data found for the specified parameters"})
 }
 
+// @BasePath /
+// @Summary Get average data for an airport for a date and a measurement type
+// @Description Get average data for an airport for a date and a measurement type
+// @Accept json
+// @Produce json
+// @Param iata path string true "Airport IATA code"
+// @Param date path string true "Date"
+// @Param measurement path string true "Measurement type"
+// @Success 200 {array} dataAverage
+// @Router /airport/{iata}/average/{date}/{measurement} [get]
 func getAirportDataAverageByDateAndType(c *gin.Context) {
 	c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
 

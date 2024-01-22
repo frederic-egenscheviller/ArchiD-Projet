@@ -1,0 +1,207 @@
+basePath: /
+definitions:
+  main.airport:
+    properties:
+      airport:
+        type: string
+    type: object
+  main.data:
+    properties:
+      airport:
+        type: string
+      measurement:
+        type: string
+      time:
+        type: string
+      value:
+        type: number
+    type: object
+  main.dataAverage:
+    properties:
+      airport:
+        type: string
+      measurement:
+        type: string
+      value:
+        type: number
+    type: object
+  main.sensor:
+    properties:
+      airport:
+        type: string
+      measurement:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is the API for the ArchiD-Projet project
+  title: ArchiD-Projet API
+  version: "1"
+paths:
+  /airport/{iata}/average/{date}:
+    get:
+      consumes:
+      - application/json
+      description: Get average data for an airport for a date
+      parameters:
+      - description: Airport IATA code
+        in: path
+        name: iata
+        required: true
+        type: string
+      - description: Date
+        in: path
+        name: date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.dataAverage'
+            type: array
+      summary: Get average data for an airport for a date
+  /airport/{iata}/average/{date}/{measurement}:
+    get:
+      consumes:
+      - application/json
+      description: Get average data for an airport for a date and a measurement type
+      parameters:
+      - description: Airport IATA code
+        in: path
+        name: iata
+        required: true
+        type: string
+      - description: Date
+        in: path
+        name: date
+        required: true
+        type: string
+      - description: Measurement type
+        in: path
+        name: measurement
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.dataAverage'
+            type: array
+      summary: Get average data for an airport for a date and a measurement type
+  /airport/{iata}/data:
+    get:
+      consumes:
+      - application/json
+      description: Get all data for an airport
+      parameters:
+      - description: Airport IATA code
+        in: path
+        name: iata
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.data'
+            type: array
+      summary: Get all data for an airport
+  /airport/{iata}/data/range/{start}/{end}/{measurement}:
+    get:
+      consumes:
+      - application/json
+      description: Get all data for an airport between two dates
+      parameters:
+      - description: Airport IATA code
+        in: path
+        name: iata
+        required: true
+        type: string
+      - description: Start date
+        in: path
+        name: start
+        required: true
+        type: string
+      - description: End date
+        in: path
+        name: end
+        required: true
+        type: string
+      - description: Measurement type
+        in: path
+        name: measurement
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.data'
+            type: array
+      summary: Get all data for an airport between two dates
+  /airport/{iata}/sensors:
+    get:
+      consumes:
+      - application/json
+      description: Get all sensors for an airport
+      parameters:
+      - description: Airport IATA code
+        in: path
+        name: iata
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.sensor'
+            type: array
+      summary: Get all sensors for an airport
+  /airports:
+    get:
+      consumes:
+      - application/json
+      description: Get all airports
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.airport'
+            type: array
+      summary: Get all airports
+  /airports/data:
+    get:
+      consumes:
+      - application/json
+      description: Get all data for all airports
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.data'
+            type: array
+      summary: Get all data for all airports
+swagger: "2.0"
