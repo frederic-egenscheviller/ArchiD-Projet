@@ -14,6 +14,12 @@ interface MeasurementData {
   value: number;
 }
 
+interface MeasurementDataAverage {
+  airport: string;
+  measurement: string;
+  value: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -32,5 +38,13 @@ export class AirportApiService {
 
   getMeasurementDataByDateRangeAndType(iata: string, start: string, end: string, measurementType: string): Observable<MeasurementData[]> {
     return this.http.get<MeasurementData[]>(`${this.apiUrl}/airport/${iata}/data/range/${start}/${end}/${measurementType}`);
+  }
+
+  getMeasurementDataAverageByDate(iata: string, date: string): Observable<MeasurementDataAverage[]> {
+    return this.http.get<MeasurementDataAverage[]>(`${this.apiUrl}/airport/${iata}/average/${date}`);
+  }
+
+  getMeasurementDataAverageByDateAndType(iata: string, date: string, measurementType: string): Observable<MeasurementDataAverage[]> {
+    return this.http.get<MeasurementDataAverage[]>(`${this.apiUrl}/airport/${iata}/average/${date}/${measurementType}`);
   }
 }
