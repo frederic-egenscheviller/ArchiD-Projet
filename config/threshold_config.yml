@@ -1,6 +1,6 @@
 temp:
-  min: 0.0
-  max: 35.0
+  min: 273.15
+  max: 308.15
 wind:
   speed: 60.0
 pressure:

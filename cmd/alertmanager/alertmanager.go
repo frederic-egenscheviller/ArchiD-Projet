@@ -98,7 +98,7 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 	sensor := data[2]
 	value, err := strconv.ParseFloat(data[3], 64)
 	if err != nil {
-		log.Fatal("Failed to convert value to integer", err)
+		log.Println("Failed to convert value to integer", err)
 		return
 	}
 
@@ -106,7 +106,7 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 	case "temperature":
 		if value < thresholds.Temp.Min || value > thresholds.Temp.Max {
 			alertMessage := fmt.Sprintf("Alert: Temperature (%f) exceeded threshold (%f-%f)", value, thresholds.Temp.Min, thresholds.Temp.Max)
-			token := client.Publish(getAlertTopicFromMessageTopic(message.Topic()), 0, false, alertMessage)
+			token := client.Publish(getAlertTopicFromMessageTopic(message.Topic()), 1, false, alertMessage)
 			token.Wait()
 		}
 	case "pressure":
@@ -123,13 +123,13 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 
 		if value < minThreshold || value > maxThreshold {
 			alertMessage := fmt.Sprintf("Alert: Pressure (%f) exceeded threshold (%f-%f)", value, minThreshold, maxThreshold)
-			token := client.Publish(getAlertTopicFromMessageTopic(message.Topic()), 0, false, alertMessage)
+			token := client.Publish(getAlertTopicFromMessageTopic(message.Topic()), 1, false, alertMessage)
 			token.Wait()
 		}
 	case "wind":
 		if value > thresholds.Wind.Speed {
 			alertMessage := fmt.Sprintf("Alert: Wind (%f) exceeded threshold (%f)", value, thresholds.Wind.Speed)
-			token := client.Publish(getAlertTopicFromMessageTopic(message.Topic()), 0, false, alertMessage)
+			token := client.Publish(getAlertTopicFromMessageTopic(message.Topic()), 1, false, alertMessage)
 			token.Wait()
 		}
 	default:

@@ -340,6 +340,8 @@ func getAirportDataAverageByDate(c *gin.Context) {
 		  |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)`,
 		influxDBBucket, startDate, endDate, airportIATA)
 
+	fmt.Println(query)
+
 	result, err := influxDBClient.QueryAPI(influxDBOrg).Query(context.Background(), query)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Error fetching data from InfluxDB"})
