@@ -29,33 +29,24 @@ export class AppComponent implements OnInit {
   rangeDates: Date[] = [];
 
   onSelectedAirportChange(selectedAirport: Airport | undefined) {
+    this.data = [];
+    this.options = []
+    this.selectedSensors = [];
+    this.rangeDates = [];
     this.selectedAirport = selectedAirport;
-    this.updateData(false);
+    this.updateData();
   }
 
   onSelectedSensorsChange(selectedSensors: Sensor[]) {
+    this.data = [];
     this.selectedSensors = selectedSensors;
-    this.updateData(false);
+    this.updateData();
   }
 
   onRangeDatesChange(rangeDates: Date[]) {
+    this.data = [];
     this.rangeDates = rangeDates;
-    this.updateData(false);
-  }
-
-  onSelectedAirportChangeAverage(selectedAirport: Airport | undefined) {
-    this.selectedAirport = selectedAirport;
-    this.updateData(true);
-  }
-
-  onSelectedSensorsChangeAverage(selectedSensors: Sensor[]) {
-    this.selectedSensors = selectedSensors;
-    this.updateData(true);
-  }
-
-  onRangeDatesChangeAverage(rangeDates: Date[]) {
-    this.rangeDates = rangeDates;
-    this.updateData(true);
+    this.updateData();
   }
 
   ngOnInit(): void {
@@ -65,16 +56,7 @@ export class AppComponent implements OnInit {
     });
   }
 
-  loadPage() {
-    this.data = [];
-    this.options = []
-    this.selectedAirport = undefined;
-    this.selectedSensors = [];
-    this.rangeDates = [];
-  }
-
-  updateData(average: boolean){
-
+  updateData(){
     const documentStyle = getComputedStyle(document.documentElement);
     const textColor = documentStyle.getPropertyValue('--text-color');
     const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary');
@@ -92,7 +74,7 @@ export class AppComponent implements OnInit {
       endDate = endDate?.split('+')[0] + 'Z';
       startDate = startDate?.split('+')[0] + 'Z';
 
-      if (this.selectedSensors != null && this.selectedSensors.length > 0 && !average) {
+      if (this.selectedSensors != null && this.selectedSensors.length > 0) {
         const datasets: { label: string; data: number[]; fill: boolean; borderColor: string; tension: number; }[] = [];
         this.selectedSensors.forEach(sensor => {
           this.airportService.getMeasurementDataByDateRangeAndType(
@@ -115,7 +97,6 @@ export class AppComponent implements OnInit {
                   labels: measurementData.map(data => data.time),
                   datasets: datasets,
                 };
-                console.log("data : ", JSON.stringify(this.data));
               }
             },
             error => {
@@ -123,82 +104,7 @@ export class AppComponent implements OnInit {
             }
           );
         });
-      } else if (average && this.rangeDates != null) {
-        let dates = this.getDates(this.rangeDates[0], this.rangeDates[this.rangeDates.length - 1]);
-        const datasets: { label: string; data: number[]; backgroundColor: string; borderColor: string; }[] = [];
-        const labels: string[] = [];
-
-        dates.forEach(date => {
-          let dateStr = this.datePipe.transform(date, 'yyyy-MM-dd');
-          if (dateStr != null) {
-            this.airportService.getMeasurementDataAverageByDate(this.selectedAirport!.code, dateStr).subscribe(
-              measurementDataAverage => {
-                measurementDataAverage.forEach(data => {
-                  let color = this.getRandomColor();
-                  if (datasets.find((dataset: {
-                    label: string;
-                  }) => dataset.label === data.measurement) === undefined) {
-                    datasets.push({
-                      label: data.measurement,
-                      data: [data.value],
-                      backgroundColor: color,
-                      borderColor: color,
-                    });
-                  } else {
-                    this.data.datasets.find((dataset: {
-                      label: string;
-                    }) => dataset.label === data.measurement).data.push(data.value);
-                  }
-                });
-                labels.push(dateStr!);
-                if (labels.length === dates.length) {
-                  this.data = {
-                    labels: labels,
-                    datasets: datasets,
-                  };
-                }
-              }
-            );
-          }
-        });
       }
-    }
-    if (average){
-      this.options = {
-        maintainAspectRatio: false,
-        aspectRatio: 0.8,
-        plugins: {
-          legend: {
-            labels: {
-              color: textColor,
-            },
-          },
-        },
-        scales: {
-          x: {
-            ticks: {
-              color: textColorSecondary,
-              font: {
-                weight: 500,
-              },
-            },
-            grid: {
-              color: surfaceBorder,
-              drawBorder: false,
-            },
-          },
-          y: {
-            ticks: {
-              color: textColorSecondary,
-            },
-            grid: {
-              color: surfaceBorder,
-              drawBorder: false,
-            },
-          },
-        },
-      };
-    }else {
       this.options = {
         maintainAspectRatio: false,
         aspectRatio: 0.6,
@@ -240,18 +146,5 @@ export class AppComponent implements OnInit {
       color += letters[Math.floor(Math.random() * 16)];
     }
     return color;
-  }
-
-  getDates(startDate: Date, endDate: Date): Date[] {
-    const dates: Date[] = [];
-
-    if (endDate !== null) {
-      while (startDate <= endDate) {
-        dates.push(new Date(startDate));
-        startDate.setDate(startDate.getDate() + 1);
-      }
-      return dates
-    }
-    return [startDate];
   }
 }

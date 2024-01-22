@@ -1,7 +1,7 @@
 <div>
   <h1 id="title">Airport MQTT ✈️</h1>
 </div>
-<p-tabView (onChange)="loadPage()">
+<p-tabView>
   <p-tabPanel header="Visualisation par capteur">
     <app-research-bar
       (selectedAirportChange)="onSelectedAirportChange($event)"
@@ -9,14 +9,6 @@
       (rangeDatesChange)="onRangeDatesChange($event)"
     ></app-research-bar>
     <p-chart type="line" [data]="data" [options]="options"></p-chart>
-  </p-tabPanel>
-  <p-tabPanel header="Données moyennes">
-    <app-research-bar
-      (selectedAirportChange)="onSelectedAirportChangeAverage($event)"
-      (selectedSensorsChange)="onSelectedSensorsChangeAverage($event)"
-      (rangeDatesChange)="onRangeDatesChangeAverage($event)"
-    ></app-research-bar>
-    <p-chart type="bar" [data]="data" [options]="options"></p-chart>
   </p-tabPanel>
 </p-tabView>
 
