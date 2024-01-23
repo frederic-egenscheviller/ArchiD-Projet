@@ -1,8 +1,8 @@
 package main
 
 import (
-	"ArchiD-Projet/internal/brokerconfiguration"
-	"ArchiD-Projet/internal/brokerutils"
+	"ArchiD-Projet/internal/brokerConfiguration"
+	"ArchiD-Projet/internal/brokerUtils"
 	"ArchiD-Projet/internal/mqttconnect"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"

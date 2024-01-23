@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 )
 
 type Config struct {
@@ -28,7 +30,13 @@ type Config struct {
 }
 
 func getAppConfig() (Config, error) {
-	yamlFile, err := os.Open("config/app_config.yml")
+	_, currentFile, _, _ := runtime.Caller(0)
+	projectRoot := filepath.Dir(currentFile)
+
+	// Construct the absolute path to the .env file
+	envFilePath := filepath.Join(projectRoot+"/../../config/", "app_config.yml")
+
+	yamlFile, err := os.Open(envFilePath)
 	if err != nil {
 		log.Fatal("Error reading app config file:", err)
 		return Config{}, err
