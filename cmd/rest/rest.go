@@ -19,6 +19,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -30,7 +32,12 @@ var influxDBClient influxdb2.Client
 var loc = time.Local
 
 func init() {
-	err := godotenv.Load()
+	_, currentFile, _, _ := runtime.Caller(0)
+	projectRoot := filepath.Dir(currentFile)
+
+	// Construct the absolute path to the .env file
+	envFilePath := filepath.Join(projectRoot+"/../../", ".env")
+	err := godotenv.Load(envFilePath)
 	if err != nil {
 		log.Fatal("Error loading .env file", err)
 	}

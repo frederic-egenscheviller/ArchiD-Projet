@@ -1,43 +1,11 @@
 package main
 
 import (
-	brokerconfiguration "ArchiD-Projet/internal/brokerConfiguration"
 	"github.com/gin-gonic/gin"
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	"github.com/joho/godotenv"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
-	"time"
 )
-
-func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
-	config := brokerconfiguration.GetInfluxdbSettings()
-
-	influxDBAPIKey = os.Getenv("INFLUX_DB_API_KEY")
-	influxDBBucket = config[0]
-	influxDBOrg = config[1]
-	influxDBURL = config[2]
-
-	loc, err = time.LoadLocation("Europe/Paris")
-	if err != nil {
-		log.Fatal("Error loading timezone")
-		return
-	}
-
-	if influxDBAPIKey == "" || influxDBURL == "" || influxDBBucket == "" {
-		log.Fatal("Incomplete InfluxDB configuration in app_config.yml")
-	}
-
-	influxDBClient = influxdb2.NewClientWithOptions(influxDBURL, influxDBAPIKey, influxdb2.DefaultOptions())
-}
 
 func TestGetAllAirport(t *testing.T) {
 	req, err := http.NewRequest("GET", "/airports", nil)
@@ -152,7 +120,6 @@ func TestGetAirportDataAverageByDateAndType(t *testing.T) {
 }
 
 func setupRouter() *gin.Engine {
-	defer influxDBClient.Close()
 	router := gin.Default()
 
 	router.GET("/airports", getAllAirports)
