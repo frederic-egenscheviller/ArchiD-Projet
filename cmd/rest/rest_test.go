@@ -1,22 +1,42 @@
 package main
 
 import (
+	brokerconfiguration "ArchiD-Projet/internal/brokerConfiguration"
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/joho/godotenv"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
+	"time"
 )
 
-var address = "localhost:8080"
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
-var dataArrTest = []data{
-	{AirportId: "MRS", Date: "2024-01-16", Time: "12:00:00", Type: "temperature", Value: 20.0},
-	{AirportId: "MRS", Date: "2024-01-16", Time: "12:00:00", Type: "wind", Value: 3.100000},
-	{AirportId: "MRS", Date: "2024-01-16", Time: "12:00:00", Type: "pressure", Value: 1024.0},
-	{AirportId: "MRS", Date: "2024-01-16", Time: "14:15:00", Type: "temperature", Value: 24.3},
-	{AirportId: "MRS", Date: "2024-01-16", Time: "14:15:00", Type: "wind", Value: 2.0},
-	{AirportId: "MRS", Date: "2024-01-16", Time: "14:15:00", Type: "pressure", Value: 1020.0},
+	config := brokerconfiguration.GetInfluxdbSettings()
+
+	influxDBAPIKey = os.Getenv("INFLUX_DB_API_KEY")
+	influxDBBucket = config[0]
+	influxDBOrg = config[1]
+	influxDBURL = config[2]
+
+	loc, err = time.LoadLocation("Europe/Paris")
+	if err != nil {
+		log.Fatal("Error loading timezone")
+		return
+	}
+
+	if influxDBAPIKey == "" || influxDBURL == "" || influxDBBucket == "" {
+		log.Fatal("Incomplete InfluxDB configuration in app_config.yml")
+	}
+
+	influxDBClient = influxdb2.NewClientWithOptions(influxDBURL, influxDBAPIKey, influxdb2.DefaultOptions())
 }
 
 func TestGetAllAirport(t *testing.T) {
@@ -33,13 +53,6 @@ func TestGetAllAirport(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
-
-	expectedBody := `[
-    {
-        "id": "MRS"
-    }
-]`
-	assert.Equal(t, expectedBody, rr.Body.String())
 }
 
 func TestGetAllAirportData(t *testing.T) {
@@ -107,7 +120,7 @@ func TestGetAirportDataByDateRangesAndType(t *testing.T) {
 }
 
 func TestGetAirportDataAverageByDate(t *testing.T) {
-	req, err := http.NewRequest("GET", "/airport/MRS/average/2024-01-16", nil)
+	req, err := http.NewRequest("GET", "/airport/MRS/average/2024-01-19", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +136,7 @@ func TestGetAirportDataAverageByDate(t *testing.T) {
 }
 
 func TestGetAirportDataAverageByDateAndType(t *testing.T) {
-	req, err := http.NewRequest("GET", "/airport/MRS/average/2024-01-16/temperature", nil)
+	req, err := http.NewRequest("GET", "/airport/MRS/average/2024-01-19/temperature", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,15 +152,16 @@ func TestGetAirportDataAverageByDateAndType(t *testing.T) {
 }
 
 func setupRouter() *gin.Engine {
+	defer influxDBClient.Close()
 	router := gin.Default()
-	setDataArray(dataArrTest)
+
 	router.GET("/airports", getAllAirports)
 	router.GET("/airports/data/", getAllAirportsData)
-	router.GET("/airport/:id/data/", getAirportDataByIATA)
-	router.GET("/airport/:id/sensors", getSensorsByAirportIATA)
-	router.GET("/airport/:id/data/range/:start/:end/:type", getAirportDataByDateRangesAndType)
-	router.GET("/airport/:id/average/:date", getAirportDataAverageByDate)
-	router.GET("/airport/:id/average/:date/:type", getAirportDataAverageByDateAndType)
+	router.GET("/airport/:iata/data/", getAirportDataByIATA)
+	router.GET("/airport/:iata/sensors", getSensorsByAirportIATA)
+	router.GET("/airport/:iata/data/range/:start/:end/:measurement", getAirportDataByDateRangesAndType)
+	router.GET("/airport/:iata/average/:date", getAirportDataAverageByDate)
+	router.GET("/airport/:iata/average/:date/:measurement", getAirportDataAverageByDateAndType)
 
 	return router
 }
